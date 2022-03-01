@@ -728,7 +728,9 @@ contract OmicronRocket is Context, IERC20, Ownable {
     uint256 public presaledAmount;
     uint256 public PRESALE_LIMIT = 5000000000 ether; // 5%
 
-    IUniswapV2Pair private BNB2USDT = IUniswapV2Pair(0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16);// pair address to get rate from bnb to usdt 0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16 (product)
+    IUniswapV2Pair private BNB2USDT = IUniswapV2Pair(0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16);
+    // pair address to get rate from bnb to usdt 0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16 (product)
+    // testnet : 0x2fa498d3Bd0c08ecac72E921fFe09F6F7471485c
 
     uint256 public MARKET_VESTING_AMOUNT = 5225000000 ether;
     uint256 public TEAM_VESTING_AMOUNT = 4275000000 ether;
