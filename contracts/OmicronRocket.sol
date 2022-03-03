@@ -390,10 +390,8 @@ library Address {
  * `onlyOwner`, which can be applied to your functions to restrict their use to
  * the owner.
  */
-contract Ownable is Context {
+abstract contract Ownable is Context {
     address private _owner;
-    address private _previousOwner;
-    uint256 private _lockTime;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -409,7 +407,7 @@ contract Ownable is Context {
     /**
      * @dev Returns the address of the current owner.
      */
-    function owner() public view returns (address) {
+    function owner() public view virtual returns (address) {
         return _owner;
     }
 
@@ -417,11 +415,11 @@ contract Ownable is Context {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
         _;
     }
 
-     /**
+    /**
      * @dev Leaves the contract without owner. It will not be possible to call
      * `onlyOwner` functions anymore. Can only be called by the current owner.
      *
@@ -441,26 +439,6 @@ contract Ownable is Context {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
-    }
-
-    function geUnlockTime() public view returns (uint256) {
-        return _lockTime;
-    }
-
-    //Locks the contract for owner for the amount of time provided
-    function lock(uint256 time) public virtual onlyOwner {
-        _previousOwner = _owner;
-        _owner = address(0);
-        _lockTime = now + time;
-        emit OwnershipTransferred(_owner, address(0));
-    }
-    
-    //Unlocks the contract for owner when _lockTime is exceeds
-    function unlock() public virtual {
-        require(_previousOwner == msg.sender, "You don't have permission to unlock");
-        require(now > _lockTime , "Contract is locked until 7 days");
-        emit OwnershipTransferred(_owner, _previousOwner);
-        _owner = _previousOwner;
     }
 }
 
@@ -692,13 +670,13 @@ contract OmicronRocket is Context, IERC20, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private _tTotal = 100000000000  * 10**18;
+    uint256 private constant _tTotal = 100000000000  * 10**18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
-    string private _name = "Omicron Rocket";
-    string private _symbol = "$OMIR";
-    uint8 private _decimals = 18;
+    string private constant _name = "Omicron Rocket";
+    string private constant _symbol = "$OMIR";
+    uint8 private constant _decimals = 18;
     
     uint256 public _taxFee = 2;
     uint256 private _previousTaxFee = _taxFee;
@@ -712,32 +690,32 @@ contract OmicronRocket is Context, IERC20, Ownable {
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
     
-    uint256 public _maxTxAmount = 5000000 * 10**6 * 10**18;
-    uint256 private numTokensSellToAddToLiquidity = 500000 * 10**6 * 10**18;
+    uint256 public _maxTxAmount = 5000000  * 10**18;
+    uint256 private numTokensSellToAddToLiquidity = 500000  * 10**18;
     
     // Team wallets
-    address public EXCHANGE_WALLET = 0xfbcB5A5a96155d1A9229cac651884AB2730012f2;
-    address public MARKETING_WALLET = 0x78BfcA0C53Ac8e6eFDE1979079B516AC3B8B8CFb;
-    address public TEAM_WALLET = 0xB7EF0e728a9b4714153c049c58d19f8a4fd0db9c; 
-    address public BURN_WALLET = 0xf081a6bcC50079E122a387043BBda1C50F8A9810;
-    address public BURN_ADDR = 0x000000000000000000000000000000000000dEaD;
-    address private FUND_WALLET = 0x01096559F1595Fad92646A2fED58048f9F611699;
+    address public constant EXCHANGE_WALLET = 0xfbcB5A5a96155d1A9229cac651884AB2730012f2;
+    address public constant MARKETING_WALLET = 0x78BfcA0C53Ac8e6eFDE1979079B516AC3B8B8CFb;
+    address public constant TEAM_WALLET = 0xB7EF0e728a9b4714153c049c58d19f8a4fd0db9c; 
+    address public constant BURN_WALLET = 0xf081a6bcC50079E122a387043BBda1C50F8A9810;
+    address public constant BURN_ADDR = 0x000000000000000000000000000000000000dEaD;
+    address private constant FUND_WALLET = 0x01096559F1595Fad92646A2fED58048f9F611699;
 
     mapping (address => uint256) private _bnbOwe;
     mapping (address => uint256) public _tokenOwe;
     uint256 public presaledAmount;
-    uint256 public PRESALE_LIMIT = 5000000000 ether; // 5%
+    uint256 public constant PRESALE_LIMIT = 5000000000 ether; // 5%
 
     IUniswapV2Pair private BNB2USDT = IUniswapV2Pair(0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16);
     // pair address to get rate from bnb to usdt 0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16 (product)
     // testnet : 0x2fa498d3Bd0c08ecac72E921fFe09F6F7471485c
 
-    uint256 public MARKET_VESTING_AMOUNT = 5225000000 ether;
-    uint256 public TEAM_VESTING_AMOUNT = 4275000000 ether;
+    uint256 public  MARKET_VESTING_AMOUNT = 5225000000 ether;
+    uint256 public  TEAM_VESTING_AMOUNT = 4275000000 ether;
 
-    uint256 public PRESALE_START = 1647518400; // 17th of march, 13:00 CET
-    uint256 public PRESALE_END = 1648123200; //24th of March, 13:00 CET
-    uint256 public PRESALE_CLIAM_START = 1648296000; // 26th 13:00 CET
+    uint256 public constant PRESALE_START = 1647518400; // 17th of march, 13:00 CET
+    uint256 public constant PRESALE_END = 1648123200; //24th of March, 13:00 CET
+    uint256 public constant PRESALE_CLAIM_START = 1648296000; // 26th 13:00 CET
 
     uint256 public AIRDROP_LEFT = 100;
     uint256 public NEXT_AIRDROP = 1648382400; // 27th March 13:00 CET
@@ -745,6 +723,9 @@ contract OmicronRocket is Context, IERC20, Ownable {
 
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
+    event IncludedInReward(address user); 
+    event ExcludedFromReward(address user);
+
     event SwapAndLiquify(
         uint256 tokensSwapped,
         uint256 ethReceived,
@@ -760,7 +741,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
     constructor () public {
         _rOwned[address(this)] = _rTotal; // lock all tokens into contract itself
         
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ed43c718714eb63d5aa57b78b54704e256024e);
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
          // Create a uniswap pair for this new token
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), _uniswapV2Router.WETH());
@@ -788,7 +769,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
 
         emit Transfer(address(0), _msgSender(), _tTotal);
 
-        // intial distribution
+        // initial distribution
         removeAllFee();
         _transferBothExcluded(address(this), EXCHANGE_WALLET, 20000000000 ether); // 20% -> liquidity wallet
         _transferBothExcluded(address(this), MARKETING_WALLET, 275000000 ether); // 0.275% (5% of 5.5%) -> marketing wallet
@@ -798,19 +779,19 @@ contract OmicronRocket is Context, IERC20, Ownable {
         restoreAllFee();
     }
 
-    function name() public view returns (string memory) {
+    function name() external view returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() external view returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() external view returns (uint8) {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return _tTotal;
     }
 
@@ -819,45 +800,46 @@ contract OmicronRocket is Context, IERC20, Ownable {
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
+        require(amount <= balanceOf(msg.sender), 'amount_exceed_balance');
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view override returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
-    function isExcludedFromReward(address account) public view returns (bool) {
+    function isExcludedFromReward(address account) external view returns (bool) {
         return _isExcluded[account];
     }
 
-    function totalFees() public view returns (uint256) {
+    function totalFees() external view returns (uint256) {
         return _tFeeTotal;
     }
 
-    function deliver(uint256 tAmount) public {
+    function deliver(uint256 tAmount) external {
         address sender = _msgSender();
         require(!_isExcluded[sender], "Excluded addresses cannot call this function");
         (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -866,7 +848,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
 
-    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
+    function reflectionFromToken(uint256 tAmount, bool deductTransferFee) external view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
             (uint256 rAmount,,,,,) = _getValues(tAmount);
@@ -891,16 +873,20 @@ contract OmicronRocket is Context, IERC20, Ownable {
         }
         _isExcluded[account] = true;
         _excluded.push(account);
+
+        emit ExcludedFromReward(account);
     }
 
     function includeInReward(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
+        require(_isExcluded[account], "Account is already included");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
                 _excluded[i] = _excluded[_excluded.length - 1];
+                _rOwned[account] = _tOwned[account].mul(_getRate());
                 _tOwned[account] = 0;
                 _isExcluded[account] = false;
                 _excluded.pop();
+                emit IncludedInReward(account);
                 break;
             }
         }
@@ -916,34 +902,37 @@ contract OmicronRocket is Context, IERC20, Ownable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
     
-        function excludeFromFee(address account) public onlyOwner {
+        function excludeFromFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = true;
     }
     
-    function includeInFee(address account) public onlyOwner {
+    function includeInFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = false;
     }
     
     function setTaxFeePercent(uint256 taxFee) external onlyOwner() {
+        require (taxFee < 5, "not_valid_param");
         _taxFee = taxFee;
     }
     
     function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner() {
+        require (liquidityFee < 5, "not_valid_param");
         _liquidityFee = liquidityFee;
     }
    
     function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
+        require (maxTxPercent < 5, "not_valid_param");
         _maxTxAmount = _tTotal.mul(maxTxPercent).div(
             10**2
         );
     }
 
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
+    function setSwapAndLiquifyEnabled(bool _enabled) external onlyOwner {
         swapAndLiquifyEnabled = _enabled;
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
     
-     //to recieve ETH from uniswapV2Router when swaping
+     //to recieve ETH from uniswapV2Router when swapping
     receive() external payable {}
 
     function _reflectFee(uint256 rFee, uint256 tFee) private {
@@ -1024,7 +1013,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
         _liquidityFee = _previousLiquidityFee;
     }
     
-    function isExcludedFromFee(address account) public view returns(bool) {
+    function isExcludedFromFee(address account) external view returns(bool) {
         return _isExcludedFromFee[account];
     }
 
@@ -1072,19 +1061,19 @@ contract OmicronRocket is Context, IERC20, Ownable {
         
         //indicates if fee should be deducted from transfer
         bool takeFee = true;
-        
-        // apply 6% extra fee for sell
-        if (to == address(uniswapV2Pair)) {
-            uint256 saleTax = amount.mul(6).div(100);
-            _tokenTransfer(from, BURN_ADDR, saleTax, false);
-            amount = amount.sub(saleTax);
-        }
 
         //if any account belongs to _isExcludedFromFee account then remove the fee
         if(_isExcludedFromFee[from] || _isExcludedFromFee[to]){
             takeFee = false;
         }
         
+        // apply 6% extra fee for sell
+        if (takeFee && to == address(uniswapV2Pair)) {
+            uint256 saleTax = amount.mul(6).div(100);
+            _tokenTransfer(from, BURN_ADDR, saleTax, false);
+            amount = amount.sub(saleTax);
+        }
+
         //transfer amount, it will take tax, burn, liquidity fee
         _tokenTransfer(from,to,amount,takeFee);
     }
@@ -1140,7 +1129,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
             tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            owner(),
+            address(this),
             block.timestamp
         );
     }
@@ -1158,9 +1147,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
             _transferStandard(sender, recipient, amount);
         } else if (_isExcluded[sender] && _isExcluded[recipient]) {
             _transferBothExcluded(sender, recipient, amount);
-        } else {
-            _transferStandard(sender, recipient, amount);
-        }
+        } 
         
         if(!takeFee)
             restoreAllFee();
@@ -1238,7 +1225,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
     }
 
     function claimPresale() external {
-        require(block.timestamp > PRESALE_CLIAM_START, 'presale_not_end');
+        require(block.timestamp > PRESALE_CLAIM_START, 'presale_not_end');
         require(_tokenOwe[msg.sender] > 0, 'not_presale');
         uint256 amount = _tokenOwe[msg.sender];
         _tokenOwe[msg.sender] = 0;
