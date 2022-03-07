@@ -667,7 +667,6 @@ contract OmicronRocket is Context, IERC20, Ownable {
     mapping (address => bool) private _isExcludedFromFee;
 
     mapping (address => bool) private _isExcluded;
-    address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
     uint256 private constant _tTotal = 100000000000  * 10**18;
@@ -688,18 +687,19 @@ contract OmicronRocket is Context, IERC20, Ownable {
     address public immutable uniswapV2Pair;
     
     bool inSwapAndLiquify;
-    bool public swapAndLiquifyEnabled = true;
+    bool public swapAndLiquifyEnabled = false;
     
     uint256 public _maxTxAmount = 5000000  * 10**18;
     uint256 private numTokensSellToAddToLiquidity = 500000  * 10**18;
     
     // Team wallets
-    address public constant EXCHANGE_WALLET = 0xfbcB5A5a96155d1A9229cac651884AB2730012f2;
-    address public constant MARKETING_WALLET = 0x78BfcA0C53Ac8e6eFDE1979079B516AC3B8B8CFb;
-    address public constant TEAM_WALLET = 0xB7EF0e728a9b4714153c049c58d19f8a4fd0db9c; 
-    address public constant BURN_WALLET = 0xf081a6bcC50079E122a387043BBda1C50F8A9810;
+    address public  constant EXCHANGE_WALLET = 0xfbcB5A5a96155d1A9229cac651884AB2730012f2;
+    address public  MARKETING_WALLET = 0x78BfcA0C53Ac8e6eFDE1979079B516AC3B8B8CFb;
+    address public  TEAM_WALLET = 0xB7EF0e728a9b4714153c049c58d19f8a4fd0db9c; 
+    address public  constant BURN_WALLET = 0xf081a6bcC50079E122a387043BBda1C50F8A9810;
     address public constant BURN_ADDR = 0x000000000000000000000000000000000000dEaD;
-    address private constant FUND_WALLET = 0x01096559F1595Fad92646A2fED58048f9F611699;
+    address private FUND_WALLET = 0x01096559F1595Fad92646A2fED58048f9F611699;
+    address private constant LOOTBOX = 0x6468B601f85778660e0b578a9D0979603Fc1C92d; // LOCKED WALLET FOR AIRDROP, PRESALE CLAIMING
 
     mapping (address => uint256) private _bnbOwe;
     mapping (address => uint256) public _tokenOwe;
@@ -720,6 +720,9 @@ contract OmicronRocket is Context, IERC20, Ownable {
     uint256 public AIRDROP_LEFT = 100;
     uint256 public NEXT_AIRDROP = 1648382400; // 27th March 13:00 CET
     uint256 public NEXT_VESTING = 1648209600; // 25th March 13:00 CET
+
+    uint256 private _rExcluded = 0;
+    uint256 private _tExcluded = 0;
 
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -759,12 +762,14 @@ contract OmicronRocket is Context, IERC20, Ownable {
         _isExcludedFromFee[TEAM_WALLET] = true;
         _isExcludedFromFee[BURN_WALLET] = true;
         _isExcludedFromFee[BURN_ADDR] = true;
+        _isExcludedFromFee[LOOTBOX] = true;
 
         excludeFromReward(EXCHANGE_WALLET);
         excludeFromReward(MARKETING_WALLET);
         excludeFromReward(TEAM_WALLET);
         excludeFromReward(BURN_WALLET);
         excludeFromReward(BURN_ADDR);
+        excludeFromReward(LOOTBOX);
         excludeFromReward(address(this));
 
         emit Transfer(address(0), _msgSender(), _tTotal);
@@ -775,7 +780,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
         _transferBothExcluded(address(this), MARKETING_WALLET, 275000000 ether); // 0.275% (5% of 5.5%) -> marketing wallet
         _transferBothExcluded(address(this), BURN_WALLET, 40000000000 ether);        // 40% burn 
         _transferBothExcluded(address(this), TEAM_WALLET, 225000000 ether);                 // (5% of 4.5%) -> Team wallet
-        _transferBothExcluded(address(this), BURN_ADDR, balanceOf(address(this)));                 // presale & airdrop to burn address
+        _transferBothExcluded(address(this), LOOTBOX, balanceOf(address(this)));                 // presale & airdrop to burn address
         restoreAllFee();
     }
 
@@ -801,6 +806,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
     }
 
     function transfer(address recipient, uint256 amount) external override returns (bool) {
+        require(msg.sender != LOOTBOX, "can't_move_fund_in_lootbox");
         require(amount <= balanceOf(msg.sender), 'amount_exceed_balance');
         _transfer(_msgSender(), recipient, amount);
         return true;
@@ -816,6 +822,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
+        require(sender != LOOTBOX, "can't_move_fund_in_lootbox");
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -871,27 +878,28 @@ contract OmicronRocket is Context, IERC20, Ownable {
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
         }
+
+        _rExcluded = _rExcluded.add(_rOwned[account]);
+        _tExcluded = _tExcluded.add(_tOwned[account]);
+
         _isExcluded[account] = true;
-        _excluded.push(account);
 
         emit ExcludedFromReward(account);
     }
 
     function includeInReward(address account) external onlyOwner() {
         require(_isExcluded[account], "Account is already included");
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _rOwned[account] = _tOwned[account].mul(_getRate());
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
-                _excluded.pop();
-                emit IncludedInReward(account);
-                break;
-            }
-        }
+        _rExcluded = _rExcluded.sub(_rOwned[account]);
+        _tExcluded = _tExcluded.sub(_tOwned[account]);
+
+        _rOwned[account] = _tOwned[account].mul(_getRate());
+        _tOwned[account] = 0;
+        _isExcluded[account] = false;
+
+        emit IncludedInReward(account);
     }
-        function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
+
+    function _transferBothExcluded(address sender, address recipient, uint256 tAmount) private {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee, uint256 tLiquidity) = _getValues(tAmount);
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
@@ -902,7 +910,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
         emit Transfer(sender, recipient, tTransferAmount);
     }
     
-        function excludeFromFee(address account) external onlyOwner {
+    function excludeFromFee(address account) external onlyOwner {
         _isExcludedFromFee[account] = true;
     }
     
@@ -932,6 +940,18 @@ contract OmicronRocket is Context, IERC20, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
     
+    function setMarketingWallet(address wallet) external onlyOwner {
+        MARKETING_WALLET = wallet;
+    }
+
+    function setTeamWallet(address wallet) external onlyOwner {
+        TEAM_WALLET = wallet;
+    }
+
+    function setFundWallet(address wallet) external onlyOwner {
+        FUND_WALLET = wallet;
+    }
+
      //to recieve ETH from uniswapV2Router when swapping
     receive() external payable {}
 
@@ -968,12 +988,12 @@ contract OmicronRocket is Context, IERC20, Ownable {
 
     function _getCurrentSupply() private view returns(uint256, uint256) {
         uint256 rSupply = _rTotal;
-        uint256 tSupply = _tTotal;      
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_rOwned[_excluded[i]] > rSupply || _tOwned[_excluded[i]] > tSupply) return (_rTotal, _tTotal);
-            rSupply = rSupply.sub(_rOwned[_excluded[i]]);
-            tSupply = tSupply.sub(_tOwned[_excluded[i]]);
+        uint256 tSupply = _tTotal;
+        if (_rExcluded > rSupply || _tExcluded > tSupply) {
+            return (_rTotal, _tTotal);
         }
+        rSupply = rSupply.sub(_rExcluded);  
+        tSupply = tSupply.sub(_tExcluded);
         if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
     }
@@ -1193,8 +1213,8 @@ contract OmicronRocket is Context, IERC20, Ownable {
         uint256 tAirdrop = 250000000 ether;
         uint256 currentRate =  _getRate();
         uint256 rAirdrop = tAirdrop.mul(currentRate);
-        _tOwned[BURN_ADDR] = _tOwned[BURN_ADDR].sub(tAirdrop);
-        _rOwned[BURN_ADDR] = _rOwned[BURN_ADDR].sub(rAirdrop);
+        _tOwned[LOOTBOX] = _tOwned[LOOTBOX].sub(tAirdrop);
+        _rOwned[LOOTBOX] = _rOwned[LOOTBOX].sub(rAirdrop);
         _reflectFee(rAirdrop, tAirdrop);
     }
 
@@ -1230,7 +1250,7 @@ contract OmicronRocket is Context, IERC20, Ownable {
         uint256 amount = _tokenOwe[msg.sender];
         _tokenOwe[msg.sender] = 0;
         removeAllFee();
-        _transferBothExcluded(address(BURN_ADDR), msg.sender, amount);
+        _transferBothExcluded(LOOTBOX, msg.sender, amount);
         restoreAllFee();
     }
 
@@ -1251,8 +1271,13 @@ contract OmicronRocket is Context, IERC20, Ownable {
         TEAM_VESTING_AMOUNT = TEAM_VESTING_AMOUNT.sub(_teamAmount);
 
         removeAllFee();
-        _transferBothExcluded(address(BURN_ADDR), MARKETING_WALLET, _marketAmount);
-        _transferBothExcluded(address(BURN_ADDR), TEAM_WALLET, _teamAmount);
+        _transferBothExcluded(LOOTBOX, MARKETING_WALLET, _marketAmount);
+        _transferBothExcluded(LOOTBOX, TEAM_WALLET, _teamAmount);
         restoreAllFee();
+    }
+
+    function withdrawFund() external onlyOwner {
+        (bool transferSuccess,) = owner().call{value : address(this).balance}("");
+        require(transferSuccess, "fail_fund_transfer");
     }
 }
