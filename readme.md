@@ -10,7 +10,7 @@
 - 275,000,000 (0.00275%) to Marketing wallet (0x78BfcA0C53Ac8e6eFDE1979079B516AC3B8B8CFb)
 - 40,000,000,000 (40%) to BURN wallet (0xf081a6bcC50079E122a387043BBda1C50F8A9810)
 - 225,000,000(0.00225%) to Team wallet (0xB7EF0e728a9b4714153c049c58d19f8a4fd0db9c)
-- Rest moves to the dead address and locked for vesting, presale, and airdrop
+- Rest moves to the dead address and locked for vesting, presale, and airdrop (0xA33F2F6EDf07db1F10984119d301aB2291687Dc3)
 
 ## 1. Presale
 - Presale starts 17th of march, 13:00 CET (1647518400), ends 24th of March, 13:00 CET (1648123200). 
@@ -18,7 +18,7 @@
 ```
 participatePresale() 
 ```
-This function gets BNB price in usd using pancakeswap and record how many tokens are purchased in presale for the caller. (1 OMIR = 0.0001 USD). All BNBs are moved to predefined address:
+This function gets BNB price in usd using pancakeswap and record how many tokens are purchased in presale for the caller. (1 OMIR = 0.001 USD). All BNBs are moved to predefined address:
 ```
 address private FUND_WALLET = 0x01096559F1595Fad92646A2fED58048f9F611699;
 ``` 
